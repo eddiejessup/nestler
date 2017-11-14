@@ -1,68 +1,151 @@
 from pprint import pprint as pp
 from queue import Empty
 import logging
+import base64
 
 from jupyter_client import KernelManager
 
 import parse
 
-
-km = KernelManager()
-
-km.start_kernel()
-kc = km.client()
-kc.start_channels()
-# kc.wait_for_ready()
-
 logger = logging.getLogger(__name__)
 
 
-def exec_code(code):
-    exec_msg_id = kc.execute(code)
-    exec_reply = kc.get_shell_msg(exec_msg_id)
+def exec_code(client, code):
+    exec_msg_id = client.execute(code)
+    exec_reply = client.get_shell_msg(exec_msg_id)
+    replies = []
     while True:
         try:
-            io_reply = kc.get_iopub_msg(timeout=2)
+            io_reply = client.get_iopub_msg(timeout=2)
         except Empty:
             logger.info('All messages received')
             break
+        c = io_reply['content']
         msg_type = io_reply['msg_type']
         if msg_type == 'stream':
-            stream_reply = io_reply
-            answer = stream_reply['content']['text']
-            break
+            replies.append(io_reply)
         elif msg_type == 'execute_input':
             logger.debug(f"Everyone, everyone! We are executing this:")
             logger.debug('```', end='')
-            logger.debug(io_reply['content']['code'], end='')
+            logger.debug(c['code'], end='')
             logger.debug('```')
-        elif msg_type == 'execute_result':
-            dat = io_reply['content']['data']
-            if 'text/plain' in dat:
-                answer = dat['text/plain']
-            else:
-                raise NotImplementedError
-            break
+        elif msg_type in ('execute_result', 'display_data'):
+            replies.append(io_reply)
         elif msg_type == 'status':
-            status = io_reply['content']['execution_state']
+            status = c['execution_state']
             logger.info(f"Kernel is '{status}'")
+            if status == 'idle':
+                if replies:
+                    break
+        elif msg_type == 'error':
+            ename = c['ename']
+            evalue = c['evalue']
+            sexc = f"{ename}: {evalue}"
+            logger.error(f"Exception: '{sexc}'")
+            raise ValueError(f"Got exception: '{sexc}'")
         else:
             pp(io_reply)
             raise NotImplementedError
-    return answer
+    return replies
 
 
-def render_inline(code, answer):
-    return answer
-
-
-def render_chunk(code, options, answer):
-    s = f"```{code}```\n"
-    s += f"> {answer}"
+def render_inline(code, replies):
+    s = ''
+    for reply in replies:
+        if reply['msg_type'] == 'execute_result':
+            data = reply[u"content"][u'data']
+            for data_type, datum in data.items():
+                if data_type == 'text/plain':
+                    s += datum
+                else:
+                    import pdb; pdb.set_trace()
+                    raise NotImplementedError
+        else:
+            raise NotImplementedError
     return s
 
 
-txt = r'''
+def render_chunk(code, options, replies):
+    sects = [f"```\n{code}```"]
+    for reply in replies:
+        if reply['msg_type'] in ('execute_result', 'display_data'):
+            data = reply[u"content"][u'data']
+            for datum_type, datum in data.items():
+                if datum_type == 'text/plain':
+                    lines = datum.strip().split('\n')
+                    lines_prompt = [f"> {ln}" for ln in lines]
+                    out = '\n'.join(lines_prompt)
+                    sects.append(out)
+                elif datum_type == 'text/html':
+                    sects.append(datum)
+                elif datum_type == 'image/png':
+                    data_uri = f"data:{datum_type};base64,{datum}"
+                    el = f'<img src="{data_uri}">'
+                    sects.append(el)
+                else:
+                    raise NotImplementedError
+        elif reply['msg_type'] == 'stream':
+            txt = reply['content']['text'].strip()
+            sects.append(f"'{txt}'")
+        else:
+            raise NotImplementedError
+    s = '\n\n'.join(sects) + '\n\n'
+    return s
+
+
+def get_kernel_client():
+    manager = KernelManager()
+    manager.start_kernel()
+    client = manager.client()
+    client.start_channels()
+    # client.wait_for_ready()
+    return client
+
+
+def process_txt(s):
+    client = get_kernel_client()
+
+    parts = parse.parse(s)
+
+    parts_evaled = []
+    for part in parts:
+        if isinstance(part, (parse.CodeChunk, parse.InlineCode)):
+            replies = exec_code(client, part.code)
+            if isinstance(part, parse.InlineCode):
+                r = render_inline(part.code, replies)
+            elif isinstance(part, parse.CodeChunk):
+                r = render_chunk(part.code, part.options, replies)
+            else:
+                raise Exception
+        elif isinstance(part, parse.Text):
+            r = part.contents
+        else:
+            raise Exception
+        parts_evaled.append(r)
+    client.shutdown()
+    s = ''.join(parts_evaled)
+    return s
+
+
+def test_pandas_html():
+    client = get_kernel_client()
+    code = '''
+import pandas as pd
+d = pd.DataFrame([1])
+d
+    '''
+    replies = exec_code(client, code)
+    for r in replies:
+        pp(r)
+        print()
+
+    s = render_chunk(code, [], replies)
+    pp(s)
+
+    return
+
+
+txt_before = r'''
 
 # A Document
 
@@ -73,14 +156,24 @@ Hi shims.
 ```{p}
 a = 2
 print("Hello")
+a
 ```
 
 ## Analysis
 
+```{p}
+import pandas as pd
+d = pd.DataFrame([1])
+d
+```
+
 Now for some specialness: `p a`. Oof!
 
 ```{p}
-print("!!!")
+import matplotlib.pyplot as plt
+plt.plot([1, 1],[2, 2])
+plt.show()
+print('!!!')
 ```
 
 ## Conclusion
@@ -88,40 +181,32 @@ print("!!!")
 Bye shims.
 '''.strip()
 
-txt_before = txt[:]
 
-parts = parse.parse(txt)
+def test_integrated():
 
-parts_evaled = []
-for part in parts:
-    if isinstance(part, (parse.CodeChunk, parse.InlineCode)):
-        answer = exec_code(part.code)
-        if isinstance(part, parse.InlineCode):
-            r = render_inline(part.code, answer)
-        elif isinstance(part, parse.CodeChunk):
-            r = render_chunk(part.code, part.options, answer)
-        else:
-            raise Exception
-    elif isinstance(part, parse.Text):
-        r = part.contents
-    else:
-        raise Exception
-    parts_evaled.append(r)
+    txt = process_txt(txt_before)
+    print(txt)
 
 
-txt = ''.join(parts_evaled)
+def test_img():
+    client = get_kernel_client()
+    code = '''
+import matplotlib.pyplot as plt
+plt.plot([1, 1],[2, 2])
+plt.show()
+print('hello')
+    '''
+    replies = exec_code(client, code)
+    # for r in replies:
+    #     pp(r)
+    #     print()
 
-# print(f"Before:")
-# print(f'"""')
-# print(txt_before)
-# print(f'"""')
-# print()
+    s = render_chunk(code, [], replies)
+    # pp(s)
+    return
 
-# res = re.sub(PATTERN, render, code, flags=re.DOTALL)
 
-# print(f"After:")
-# print(f'"""')
-print(txt)
-# print(f'"""')
-
-kc.shutdown()
+if __name__ == '__main__':
+    test_integrated()
+    # test_pandas_html()
+    # test_img()

@@ -1,0 +1,14 @@
+# To Do
+
+- Chunk names
+- Allow backticks in markdown
+- Plot outputs
+- Handle options
+- Options are code, so handle them like that
+- Global options:
+    ```{r global_options, include=FALSE}
+    knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',
+                          echo=FALSE, warning=FALSE, message=FALSE)
+    ```
+- YAML header
+- Allow code in YAML headers
