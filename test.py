@@ -1,11 +1,10 @@
 from pprint import pprint as pp
 from queue import Empty
 import logging
-import base64
 
 from jupyter_client import KernelManager
 
-import parse
+import parseful as parse
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +104,7 @@ def get_kernel_client():
 def process_txt(s):
     client = get_kernel_client()
 
-    parts = parse.parse(s)
+    header, parts = parse.parse(s)
 
     parts_evaled = []
     for part in parts:
@@ -117,8 +116,8 @@ def process_txt(s):
                 r = render_chunk(part.code, part.options, replies)
             else:
                 raise Exception
-        elif isinstance(part, parse.Text):
-            r = part.contents
+        elif isinstance(part, str):
+            r = part
         else:
             raise Exception
         parts_evaled.append(r)
@@ -145,47 +144,10 @@ d
     return
 
 
-txt_before = r'''
-
-# A Document
-
-## Introduction
-
-Hi shims.
-
-```{p}
-a = 2
-print("Hello")
-a
-```
-
-## Analysis
-
-```{p}
-import pandas as pd
-d = pd.DataFrame([1])
-d
-```
-
-Now for some specialness: `p a`. Oof!
-
-```{p}
-import matplotlib.pyplot as plt
-plt.plot([1, 1],[2, 2])
-plt.show()
-print('!!!')
-```
-
-## Conclusion
-
-Bye shims.
-'''.strip()
-
-
 def test_integrated():
-
-    txt = process_txt(txt_before)
-    print(txt)
+    txt_in = open('in.md').read()
+    txt_out = process_txt(txt_in)
+    print(txt_out)
 
 
 def test_img():
