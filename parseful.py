@@ -43,7 +43,7 @@ def process_chunk_opts(t):
             ident, val = opt
             r[ident.name] = val
         elif isinstance(opt, Identifier):
-            r[opt.name] = None
+            r['label'] = opt.name
         elif isinstance(opt, StringLit):
             r[opt.contents] = None
         else:
@@ -85,7 +85,7 @@ def read_maybe_yaml_block(source):
     if match is not None:
         yaml_source = match.group(1)
         contents = yaml.safe_load(yaml_source)
-        remainder = s[match.end():]
+        remainder = source[match.end():]
     else:
         contents = {}
         remainder = source
