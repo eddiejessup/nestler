@@ -62,5 +62,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO)
-    out_path_base = opath.splitext(args.in_file.name)
+    out_path_base = opath.splitext(args.in_file.name)[0]
     main(args.in_file, out_path_base)

@@ -5,13 +5,15 @@ from jupyter_client import KernelManager
 
 logger = logging.getLogger(__name__)
 
+TIMEOUT_SECONDS = 10
+
 
 def exec_code(client, code, raise_errors):
     client.execute(code)
     replies = []
     while True:
         try:
-            io_reply = client.get_iopub_msg(timeout=2)
+            io_reply = client.get_iopub_msg(timeout=TIMEOUT_SECONDS)
         except Empty:
             logger.info('All messages received')
             break

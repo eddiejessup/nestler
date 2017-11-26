@@ -5,6 +5,8 @@ from collections import namedtuple, OrderedDict
 import yaml
 import pyparsing as pp
 
+CODE_PREFIX_STR = 'py'
+
 StringLit = namedtuple('StringLit', ['contents'])
 Identifier = namedtuple('Identifier', ['name'])
 
@@ -19,7 +21,8 @@ identifier = (pp.Word(initChars=pp.alphas+"_", bodyChars=pp.alphanums+"_.")
               .setParseAction(lambda t: Identifier(name=t[0])))
 
 # Define a few characters involved in rules.
-L_BRACE, R_BRACE, EQUALS, P = map(pp.Suppress, '{}=p')
+L_BRACE, R_BRACE, EQUALS = map(pp.Suppress, '{}=')
+CODE_PREFIX = pp.Suppress(pp.Literal(CODE_PREFIX_STR))
 
 number_literal = (
     pp.Combine(
@@ -61,7 +64,7 @@ chunk_options = (
     whitespace + pp.delimitedList(chunk_assign_option | identifier | string_literal, delim=',')
 ).setParseAction(process_chunk_opts)
 chunk_header = (
-    L_BRACE + P
+    L_BRACE + CODE_PREFIX
     # + pp.Optional(chunk_label, default=None)
     + pp.Optional(chunk_options, default={})
     + maybe_whitespace + R_BRACE
@@ -74,7 +77,7 @@ chunk = (
 ).setParseAction(lambda t: CodeChunk(options=t[0], code=t[1]))
 
 inline_code = (
-    P + whitespace + code_body
+    CODE_PREFIX + whitespace + code_body
 ).setParseAction(lambda t: InlineCode(code=t[0]))
 
 VALID_TEXT_CHARS = (pp.printables + '\n\r\t ')
@@ -92,28 +95,36 @@ def read_maybe_yaml_block(source):
     return contents, remainder
 
 
+CHUNK_PREFIX = '\n```'
+CHUNK_PARSE_START = CHUNK_PREFIX + '{' + CODE_PREFIX_STR
+CHUNK_PARSE_END = '```'
+INLINE_PREFIX = '`'
+INLINE_PARSE_START = f'{INLINE_PREFIX}{CODE_PREFIX_STR} '
+INLINE_PARSE_END = '`'
+
+
 def _parse(s):
     header, s = read_maybe_yaml_block(s)
 
     i = 0
     parts = []
     while i < len(s):
-        if s[i:i+6] == '\n```{p':
-            i += 4
+        if s[i:].startswith(CHUNK_PARSE_START):
+            i += len(CHUNK_PREFIX)
             chunk_str = ''
-            while s[i:i+3] != '```':
+            while not s[i:].startswith(CHUNK_PARSE_END):
                 chunk_str += s[i]
                 i += 1
-            i += 3
+            i += len(CHUNK_PARSE_END)
             chunk_obj = chunk.parseString(chunk_str, parseAll=True)
             parts.extend(chunk_obj)
-        elif s[i:i+3] == '`p ':
-            i += 1
+        elif s[i:].startswith(INLINE_PARSE_START):
+            i += len(INLINE_PREFIX)
             inline_code_str = ''
-            while s[i] != '`':
+            while not s[i:].startswith(INLINE_PARSE_END):
                 inline_code_str += s[i]
                 i += 1
-            i += 1
+            i += len(INLINE_PARSE_END)
             inline_code_obj = inline_code.parseString(inline_code_str,
                                                       parseAll=True)
             parts.extend(inline_code_obj)
@@ -142,20 +153,20 @@ if __name__ == '__main__':
 a: 2
 ---
 
-# Hello the `p blues`
+# Hello the `py blues`
 
-```{p lab, "yo", a=2}
+```{py lab, "yo", a=2}
 print("hi`")
 print(1)
 ```
 
 hi `guys` you do maaaaaaaaaan
 
-```{p withLabel}
+```{py withLabel}
 print(1)
 ```
 
-```{p withLabel11, b3 = 3}
+```{py withLabel11, b3 = 3}
 print(1)
 ```
 '''.strip()

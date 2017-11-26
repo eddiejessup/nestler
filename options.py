@@ -37,9 +37,9 @@ def coerce_val_to_boolean(val_raw):
             raise
     else:
         val_str = val_str.lower().strip()
-        if val_str in ('true', 't', '1'):
+        if val_str in ('true', '1', 'yes', 'y', 'on'):
             return True
-        elif val_str in ('false', 'f', '0'):
+        elif val_str in ('false', '0', 'no', 'n', 'off'):
             return False
         elif val_str in ('none', 'null', 'na'):
             return None

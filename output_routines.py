@@ -3,6 +3,7 @@ import logging
 import os
 
 import pypandoc
+import yaml
 
 from constants import ChunkOption, ResultsStyle
 import parseful as parse
@@ -112,7 +113,9 @@ DEFAULT_RENDER_OPTS = {
 
 
 DEFAULT_PANDOC_MD_EXTENSIONS = [
-    'fenced_code_attributes',
+    '+fenced_code_attributes',
+    '-markdown_in_html_blocks',
+    '+raw_html',
 ]
 
 
@@ -172,7 +175,8 @@ def recover_inline_source(code):
 def render_inline(code, replies):
     s = ''
     for reply in replies:
-        if reply['msg_type'] == 'execute_result':
+        msg_type = reply['msg_type']
+        if msg_type == 'execute_result':
             data = reply[u'content'][u'data']
             for data_type, datum in data.items():
                 if data_type == 'text/plain':
@@ -180,8 +184,12 @@ def render_inline(code, replies):
                 else:
                     import pdb; pdb.set_trace()
                     raise NotImplementedError
+        elif msg_type == 'error':
+            sexc = execute.recover_exception(reply)
+            raise ValueError(sexc)
         else:
-            raise NotImplementedError
+            import pdb; pdb.set_trace()
+            raise NotImplementedError(msg_type)
     return s
 
 
@@ -219,12 +227,26 @@ def render_chunk(code, options, replies):
                     out = '\n'.join(lines_prompt)
                     add_result(sects, out, options, raw=datum)
                 elif datum_type == 'text/html':
+                    snip = datum[:50] + '...' + datum[-50:]
+                    logger.info(f'Adding datum of type "{datum_type}": "{snip}"')
                     add_result(sects, datum, options, raw=datum)
                 elif datum_type == 'image/png':
+                    logger.info(f'Adding datum of type "{datum_type}"')
                     data_uri = f'data:{datum_type};base64,{datum}'
                     el = f'<img src="{data_uri}">'
                     add_result(sects, el, options, raw=datum)
+                elif datum_type == 'application/javascript':
+                    snip = datum[:50] + '...' + datum[-50:]
+                    logger.info(f'Adding datum of type "{datum_type}": "{snip}"')
+                    el = f'\n<script>\n{datum}\n</script>\n'
+                    add_result(sects, el, options, raw=datum)
+                elif datum_type == 'application/vnd.bokehjs_load.v0+json':
+                    snip = datum[:50] + '...' + datum[-50:]
+                    logger.info(f'Adding datum of type "{datum_type}": "{snip}"')
+                    el = f'\n<script>\n{datum}\n</script>\n'
+                    add_result(sects, el, options, raw=datum)
                 else:
+                    import pdb; pdb.set_trace()
                     raise NotImplementedError
         elif msg_type == 'stream':
             txt = reply['content']['text'].strip()
@@ -284,6 +306,10 @@ def process_parts(parts, header, global_options):
     return s, header
 
 
+def get_pandoc_var_args(k, v):
+    return ['--variable', f'{k}={v}']
+
+
 def output_html_document(header, parts, output_fmt_str, global_options,
                          out_path_base):
     render_options = update_render_options(DEFAULT_RENDER_OPTS,
@@ -309,16 +335,16 @@ def output_html_document(header, parts, output_fmt_str, global_options,
     if extra_md_extensions:
         ext_str = '\n'.join([f'    - {e}' for e in extra_md_extensions])
         logger.info(f'Enabling markdown extensions:\n{ext_str}')
-        pandoc_md_extensions.extend(extra_md_extensions)
+        pandoc_md_extensions.extend([f'+{e}' for e in extra_md_extensions])
     # Handle self-contained header option.
     if render_options.get(RenderOption.make_self_contained):
         logger.info('Enabling "self-contained" option')
         extra_pandoc_args.append('--self-contained')
     # Handle format_smartly header option.
     if (render_options.get(RenderOption.format_smartly)
-            and 'smart' not in pandoc_md_extensions):
+            and '+smart' not in pandoc_md_extensions):
         logger.info('Enabling "smart" markdown extension')
-        pandoc_md_extensions.append('smart')
+        pandoc_md_extensions.append('+smart')
     # Handle template header option.
     template_path = render_options.get(RenderOption.pandoc_template_path)
     if template_path is not None:
@@ -328,12 +354,12 @@ def output_html_document(header, parts, output_fmt_str, global_options,
     slide_theme = render_options.get(RenderOption.slide_theme)
     if slide_theme is not None:
         logger.info(f'Setting slide theme to "{slide_theme}"')
-        extra_pandoc_args.extend(['--theme', slide_theme])
+        extra_pandoc_args.extend(get_pandoc_var_args('theme', slide_theme))
     # Handle slides color theme.
     slide_color_theme = render_options.get(RenderOption.slide_color_theme)
     if slide_color_theme is not None:
         logger.info(f'Setting slide color theme to "{slide_color_theme}"')
-        extra_pandoc_args.extend(['--colortheme', slide_color_theme])
+        extra_pandoc_args.extend(get_pandoc_var_args('colortheme', slide_theme))
     # Handle table of contents.
     if render_options.get(RenderOption.table_of_contents):
         logger.info('Enabling "table of contents" option')
@@ -357,6 +383,18 @@ def output_html_document(header, parts, output_fmt_str, global_options,
     if highlight_style is not None:
         logger.info(f'Setting syntax highlight style to "{highlight_style}"')
         extra_pandoc_args.extend(['--highlight-style', highlight_style])
+    # Handle includes.
+    includes = render_options.get(RenderOption.include_files)
+    if includes is not None:
+        in_header = includes.get('in_header')
+        if in_header is not None:
+            extra_pandoc_args.extend(['--include-in-header', in_header])
+        before_body = includes.get('before_body')
+        if before_body is not None:
+            extra_pandoc_args.extend(['--include-before-body', before_body])
+        after_body = includes.get('after_body')
+        if after_body is not None:
+            extra_pandoc_args.extend(['--include-after-body', after_body])
 
     if render_options.get(RenderOption.keep_markdown):
         md_out_path = 'intermediate.md'
@@ -367,9 +405,19 @@ def output_html_document(header, parts, output_fmt_str, global_options,
         with open(md_out_path, 'w') as md_out_file:
             md_out_file.write(md_out_str)
 
-    in_fmt = 'markdown' + ''.join([f'+{ext}' for ext in pandoc_md_extensions])
+    extra_pandoc_args.extend(get_pandoc_var_args('title', 'hihi'))
+
+    in_fmt = 'markdown_strict' + ''.join(pandoc_md_extensions)
     out_fmt = 'html'
 
+    pandoc_header = header.copy()
+    pandoc_header.pop('output')
+    pandoc_metadata = yaml.dump(
+        pandoc_header,
+        default_flow_style=False,
+        indent=4
+    )
+    md_out_str_meta = f'---\n{pandoc_metadata}\n---\n{md_out_str}'
     out_path = f"{out_path_base}{os.extsep}html"
     pypandoc.convert_text(
         source=md_out_str,
