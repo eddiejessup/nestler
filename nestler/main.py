@@ -2,9 +2,9 @@ import logging
 import argparse
 import os.path as opath
 
-import parseful as parse
-from constants import ChunkOption
-import output_routines
+from . import parseful as parse
+from .constants import ChunkOption
+from . import output_routines
 
 logger = logging.getLogger(__name__)
 

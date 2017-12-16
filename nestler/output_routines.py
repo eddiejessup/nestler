@@ -5,10 +5,10 @@ import os
 import pypandoc
 import yaml
 
-from constants import ChunkOption, ResultsStyle
-import parseful as parse
-import execute
-from options import update_chunk_options
+from .constants import ChunkOption, ResultsStyle
+from . import parseful as parse
+from . import execute
+from .options import update_chunk_options
 
 logger = logging.getLogger(__name__)
 

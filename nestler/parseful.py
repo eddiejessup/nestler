@@ -61,7 +61,9 @@ chunk_assign_option = (
     identifier + maybe_whitespace + EQUALS + maybe_whitespace + option_val
 ).setParseAction(lambda t: ChunkAssignOpt(identifier=t[0], value=t[1]))
 chunk_options = (
-    whitespace + pp.delimitedList(chunk_assign_option | identifier | string_literal, delim=',')
+    whitespace
+    + pp.delimitedList(chunk_assign_option | identifier | string_literal,
+                       delim=',')
 ).setParseAction(process_chunk_opts)
 chunk_header = (
     L_BRACE + CODE_PREFIX

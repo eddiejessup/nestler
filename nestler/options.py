@@ -1,7 +1,7 @@
 from decimal import Decimal
 
-import parseful as parse
-from constants import ChunkOption, ResultsStyle
+from . import parseful as parse
+from .constants import ChunkOption, ResultsStyle
 
 
 BOOLEAN_CHUNK_OPTS = (

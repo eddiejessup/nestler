@@ -1,20 +1,12 @@
 # To-Do
 
+- parsing
+    - simplify parsing, to just look for '```{' blocks, and infer the language after parsing. more flexible.
 - Handle options
-    - comment
-    - chunk label
     - cache
     - cache.path
     - engine
-    - error
-    - eval (false: do not run code)
-    - include (false: run code, hide code, hide output)
-    - echo (false: run code, hide code, show output)
-    - results
-        - markup (default)
-        - asis (pass through)
-        - hide (hide output)
-        - hold ('put all results below code')
+    - results: hold ('put all results below code')
 - Options are code, so handle them like that
 - Global options:
     ```{r global_options, include=FALSE}
@@ -53,3 +45,11 @@
     - toc_depth: The lowest level of headings to add to table of contents
     - toc_float: Float the table of contents to the le  of the main content
 - Allow code in YAML headers
+- look through markdown extensions for useful defaults
+
+## Things to look into
+
+- Pandoc filters
+- Pandoc templates
+- Table of contents
+- 
