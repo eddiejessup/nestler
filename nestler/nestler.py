@@ -34,7 +34,7 @@ DEFAULT_CHUNK_OPTS = {
 }
 
 
-def main(in_stream, out_path_base):
+def run(in_stream, out_path_base):
     md_in = in_stream.read()
 
     header, parts = parse.parse(md_in)
@@ -50,7 +50,13 @@ def main(in_stream, out_path_base):
                        out_path_base)
 
 
-if __name__ == '__main__':
+def set_log_level(verbose_count):
+    # Set log level to WARN for 1, then increase verbosity with each increment.
+    level = max(3 - verbose_count, 0) * 10
+    logging.basicConfig(level=level)
+
+
+def main():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument(
         'in_file',
@@ -59,8 +65,13 @@ if __name__ == '__main__':
         # internally as it's a keyword.
         metavar='input'
     )
+    parser.add_argument('-v', '--verbose', dest='verbose_count',
+                        action='count', default=0,
+                        help='Each occurrence increases log verbosity.')
     args = parser.parse_args()
+
+    set_log_level(args.verbose_count)
 
     logging.basicConfig(level=logging.INFO)
     out_path_base = opath.splitext(args.in_file.name)[0]
-    main(args.in_file, out_path_base)
+    run(args.in_file, out_path_base)

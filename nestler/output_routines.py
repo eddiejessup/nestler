@@ -114,8 +114,11 @@ DEFAULT_RENDER_OPTS = {
 
 DEFAULT_PANDOC_MD_EXTENSIONS = [
     '+fenced_code_attributes',
+    '+backtick_code_blocks',
+    '+tex_math_dollars',
     '-markdown_in_html_blocks',
     '+raw_html',
+    '+autolink_bare_uris',
 ]
 
 
@@ -222,10 +225,12 @@ def render_chunk(code, options, replies):
             data = reply[u'content'][u'data']
             for datum_type, datum in data.items():
                 if datum_type == 'text/plain':
-                    lines = datum.strip().split('\n')
-                    lines_prompt = [f'{options[ChunkOption.result_prefix]} {ln}' for ln in lines]
-                    out = '\n'.join(lines_prompt)
-                    add_result(sects, out, options, raw=datum)
+                    # Ugly way to avoid printing standard 'Figure <>' return.
+                    if msg_type != 'display_data':
+                        lines = datum.strip().split('\n')
+                        lines_prompt = [f'{options[ChunkOption.result_prefix]} {ln}' for ln in lines]
+                        out = '\n'.join(lines_prompt)
+                        add_result(sects, out, options, raw=datum)
                 elif datum_type == 'text/html':
                     snip = datum[:50] + '...' + datum[-50:]
                     logger.info(f'Adding datum of type "{datum_type}": "{snip}"')
@@ -291,7 +296,7 @@ def process_parts(parts, header, global_options):
                 replies = execute.exec_code(
                     client,
                     part.code,
-                    raise_errors=options[ChunkOption.show_errors],
+                    raise_errors=not options[ChunkOption.show_errors],
                 )
                 r = render_chunk(part.code, options, replies)
             else:
@@ -388,13 +393,25 @@ def output_html_document(header, parts, output_fmt_str, global_options,
     if includes is not None:
         in_header = includes.get('in_header')
         if in_header is not None:
+            logger.info(f'Adding file in header "{in_header}"')
             extra_pandoc_args.extend(['--include-in-header', in_header])
         before_body = includes.get('before_body')
         if before_body is not None:
+            logger.info(f'Adding file before body "{before_body}"')
             extra_pandoc_args.extend(['--include-before-body', before_body])
         after_body = includes.get('after_body')
         if after_body is not None:
+            logger.info(f'Adding file after body "{after_body}"')
             extra_pandoc_args.extend(['--include-after-body', after_body])
+
+    pandoc_header = header.copy()
+    pandoc_header.pop('output')
+    pandoc_metadata = yaml.dump(
+        pandoc_header,
+        default_flow_style=False,
+        indent=4
+    )
+    md_out_str = f'---\n{pandoc_metadata}\n---\n{md_out_str}'
 
     if render_options.get(RenderOption.keep_markdown):
         md_out_path = 'intermediate.md'
@@ -405,19 +422,10 @@ def output_html_document(header, parts, output_fmt_str, global_options,
         with open(md_out_path, 'w') as md_out_file:
             md_out_file.write(md_out_str)
 
-    extra_pandoc_args.extend(get_pandoc_var_args('title', 'hihi'))
-
-    in_fmt = 'markdown_strict' + ''.join(pandoc_md_extensions)
+    # in_fmt = 'markdown_strict' + ''.join(pandoc_md_extensions)
+    in_fmt = 'markdown' + ''.join(pandoc_md_extensions)
     out_fmt = 'html'
 
-    pandoc_header = header.copy()
-    pandoc_header.pop('output')
-    pandoc_metadata = yaml.dump(
-        pandoc_header,
-        default_flow_style=False,
-        indent=4
-    )
-    md_out_str_meta = f'---\n{pandoc_metadata}\n---\n{md_out_str}'
     out_path = f"{out_path_base}{os.extsep}html"
     pypandoc.convert_text(
         source=md_out_str,

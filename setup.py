@@ -55,6 +55,10 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
+        'pyyaml',
+        'pyparsing',
+        'pypandoc',
+        'jupyter',
     ],
 
     # Additional groups of dependencies (e.g. development

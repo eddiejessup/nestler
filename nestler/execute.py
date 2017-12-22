@@ -13,18 +13,20 @@ def exec_code(client, code, raise_errors):
     replies = []
     while True:
         try:
-            io_reply = client.get_iopub_msg(timeout=TIMEOUT_SECONDS)
+            reply = client.get_iopub_msg(timeout=TIMEOUT_SECONDS)
         except Empty:
             logger.info('All messages received')
             break
-        c = io_reply['content']
-        msg_type = io_reply['msg_type']
+        c = reply['content']
+        msg_type = reply['msg_type']
         if msg_type == 'stream':
-            replies.append(io_reply)
+            logger.debug(f"Got {msg_type} reply: '{c}'")
+            replies.append(reply)
         elif msg_type == 'execute_input':
-            logger.debug(f"Everyone, everyone! We are executing this:\n```\nc['code']\n```")
+            logger.debug(f"Executing:\n```\n{c['code']}```")
         elif msg_type in ('execute_result', 'display_data'):
-            replies.append(io_reply)
+            logger.debug(f"Got {msg_type} reply: '{c}'")
+            replies.append(reply)
         elif msg_type == 'status':
             status = c['execution_state']
             logger.info(f"Kernel is '{status}'")
@@ -33,12 +35,12 @@ def exec_code(client, code, raise_errors):
                     break
         elif msg_type == 'error':
             if raise_errors:
-                sexc = recover_exception(io_reply)
+                sexc = recover_exception(reply)
                 raise ValueError(f"Got exception: '{sexc}'")
             else:
-                replies.append(io_reply)
+                replies.append(reply)
         else:
-            raise NotImplementedError
+            raise NotImplementedError(reply)
     return replies
 
 
