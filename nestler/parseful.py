@@ -5,7 +5,7 @@ from collections import namedtuple, OrderedDict
 import yaml
 import pyparsing as pp
 
-CODE_PREFIX_STR = 'py'
+CODE_PREFIX_STR = 'python'
 
 StringLit = namedtuple('StringLit', ['contents'])
 Identifier = namedtuple('Identifier', ['name'])

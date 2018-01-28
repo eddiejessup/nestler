@@ -18,21 +18,21 @@ BOOLEAN_CHUNK_OPTS = (
 )
 
 
-def coerce_val_to_str(val_raw):
-    if isinstance(val_raw, parse.StringLit):
-        return val_raw.contents
-    elif isinstance(val_raw, parse.Identifier):
-        return val_raw.name
+def coerce_val_to_str(value_raw):
+    if isinstance(value_raw, parse.StringLit):
+        return value_raw.contents
+    elif isinstance(value_raw, parse.Identifier):
+        return value_raw.name
     else:
-        raise ValueError(val_raw)
+        raise ValueError(value_raw)
 
 
-def coerce_val_to_boolean(val_raw):
+def coerce_val_to_boolean(value_raw):
     try:
-        val_str = coerce_val_to_str(val_raw)
+        val_str = coerce_val_to_str(value_raw)
     except ValueError:
-        if isinstance(val_raw, Decimal):
-            return bool(val_raw)
+        if isinstance(value_raw, Decimal):
+            return bool(value_raw)
         else:
             raise
     else:
@@ -44,25 +44,27 @@ def coerce_val_to_boolean(val_raw):
         elif val_str in ('none', 'null', 'na'):
             return None
         else:
-            raise ValueError(val_raw)
+            raise ValueError(value_raw)
 
 
 def update_chunk_options(initial_options, new_options):
     opts = initial_options.copy()
-    for opt_str, val_raw in new_options.items():
+    for opt_str, value_raw in new_options.items():
         chunk_opt = ChunkOption(opt_str)
         if chunk_opt == ChunkOption.result_prefix:
-            if not isinstance(val_raw, parse.StringLit):
+            if not isinstance(value_raw, parse.StringLit):
                 raise Exception
             else:
-                value = val_raw.contents
+                value = value_raw.contents
         elif chunk_opt in BOOLEAN_CHUNK_OPTS:
-            value = coerce_val_to_boolean(val_raw)
+            value = coerce_val_to_boolean(value_raw)
         elif chunk_opt == ChunkOption.results_style:
-            style_val = coerce_val_to_str(val_raw)
-            value = ResultsStyle(style_val)
+            val_str = coerce_val_to_str(value_raw)
+            value = ResultsStyle(val_str)
+        elif chunk_opt == ChunkOption.label:
+            value = value_raw
         else:
             import pdb; pdb.set_trace()
-            raise NotImplementedError((opt_str, val_raw))
+            raise NotImplementedError((opt_str, value_raw))
         opts[chunk_opt] = value
     return opts

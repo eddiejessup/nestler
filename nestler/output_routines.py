@@ -4,11 +4,27 @@ import os
 
 import pypandoc
 import yaml
+from jinja2 import FileSystemLoader, Environment
 
 from .constants import ChunkOption, ResultsStyle
 from . import parseful as parse
 from . import execute
 from .options import update_chunk_options
+from . import utils
+
+import os
+
+THIS_FILE_DIR_PATH = os.path.dirname(os.path.abspath(__file__))
+
+
+tmpl_env = Environment(
+    loader=FileSystemLoader(os.path.join(THIS_FILE_DIR_PATH, 'templates')),
+    trim_blocks=True,
+    lstrip_blocks=True
+)
+
+figure_tmpl = tmpl_env.get_template('embedded_figure.html')
+script_tmpl = tmpl_env.get_template('script.html')
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +116,7 @@ DEFAULT_RENDER_OPTS = {
     RenderOption.pandoc_args: None,
     RenderOption.preserve_yaml: None,
     RenderOption.reference_docx: None,
-    RenderOption.make_self_contained: True,
+    RenderOption.make_self_contained: False,
     RenderOption.slide_heading_level: None,
     RenderOption.smaller: None,
     RenderOption.format_smartly: True,
@@ -175,24 +191,14 @@ def recover_inline_source(code):
     return f'`\n{code}`'
 
 
-def render_inline(code, replies):
+def render_inline(code, outs, raise_errors):
+    for content in outs.pop('error', []):
+        sexc = execute.recover_exception(content)
+        raise ValueError(f"Got exception: '{sexc}'")
+
     s = ''
-    for reply in replies:
-        msg_type = reply['msg_type']
-        if msg_type == 'execute_result':
-            data = reply[u'content'][u'data']
-            for data_type, datum in data.items():
-                if data_type == 'text/plain':
-                    s += datum
-                else:
-                    import pdb; pdb.set_trace()
-                    raise NotImplementedError
-        elif msg_type == 'error':
-            sexc = execute.recover_exception(reply)
-            raise ValueError(sexc)
-        else:
-            import pdb; pdb.set_trace()
-            raise NotImplementedError(msg_type)
+    for content in outs.pop('text', []):
+        s += content
     return s
 
 
@@ -216,89 +222,110 @@ def add_result(sects, r, options, raw):
         sects.append(v)
 
 
-def render_chunk(code, options, replies):
+def render_chunk(code, options, outs, raise_errors):
     sects = []
     add_chunk_code(sects, code, options)
-    for reply in replies:
-        msg_type = reply['msg_type']
-        if msg_type in ('execute_result', 'display_data'):
-            data = reply[u'content'][u'data']
-            for datum_type, datum in data.items():
-                if datum_type == 'text/plain':
-                    # Ugly way to avoid printing standard 'Figure <>' return.
-                    if msg_type != 'display_data':
-                        lines = datum.strip().split('\n')
-                        lines_prompt = [f'{options[ChunkOption.result_prefix]} {ln}' for ln in lines]
-                        out = '\n'.join(lines_prompt)
-                        add_result(sects, out, options, raw=datum)
-                elif datum_type == 'text/html':
-                    snip = datum[:50] + '...' + datum[-50:]
-                    logger.info(f'Adding datum of type "{datum_type}": "{snip}"')
-                    add_result(sects, datum, options, raw=datum)
-                elif datum_type == 'image/png':
-                    logger.info(f'Adding datum of type "{datum_type}"')
-                    data_uri = f'data:{datum_type};base64,{datum}'
-                    el = f'<img src="{data_uri}">'
-                    add_result(sects, el, options, raw=datum)
-                elif datum_type == 'application/javascript':
-                    snip = datum[:50] + '...' + datum[-50:]
-                    logger.info(f'Adding datum of type "{datum_type}": "{snip}"')
-                    el = f'\n<script>\n{datum}\n</script>\n'
-                    add_result(sects, el, options, raw=datum)
-                elif datum_type == 'application/vnd.bokehjs_load.v0+json':
-                    snip = datum[:50] + '...' + datum[-50:]
-                    logger.info(f'Adding datum of type "{datum_type}": "{snip}"')
-                    el = f'\n<script>\n{datum}\n</script>\n'
-                    add_result(sects, el, options, raw=datum)
-                else:
-                    import pdb; pdb.set_trace()
-                    raise NotImplementedError
-        elif msg_type == 'stream':
-            txt = reply['content']['text'].strip()
-            stream_name = reply['content']['name']
-            if stream_name == 'stderr' and options[ChunkOption.show_warnings]:
-                s = f'WARNING {options[ChunkOption.result_prefix]} "{txt}"'
-                add_result(sects, s, options, raw=txt)
-            elif stream_name == 'stdout' and options[ChunkOption.show_messages]:
-                s = f'{options[ChunkOption.result_prefix]} "{txt}"'
-                add_result(sects, s, options, raw=txt)
-            else:
-                pass
-        elif msg_type == 'error':
-            sexc = execute.recover_exception(reply)
-            s = f'ERROR {options[ChunkOption.result_prefix]} "{sexc}"'
-            add_result(sects, s, options, raw=sexc)
+
+    for content in outs.pop('display_text', []):
+        # Ugly way to avoid printing standard 'Figure <>' return.
+        pass
+
+    for content in outs.pop('text', []):
+        lines = content.strip().split('\n')
+        lines_prompt = [
+            f'{options[ChunkOption.result_prefix]} {ln}'
+            for ln in lines
+        ]
+        out = '\n'.join(lines_prompt)
+        add_result(sects, out, options, raw=content)
+
+    for content in outs.pop('html', []):
+        # TODO: Identify tables, to allow captions.
+        logger.info(f'Adding HTML: "{utils.trunc(content)}"')
+        add_result(sects, content, options, raw=content)
+
+    for content in outs.pop('image', []):
+        logger.info(f'Adding image')
+        el = figure_tmpl.render(
+            fmt=content['format'],
+            data=content['data'],
+            slug=content['slug'],
+            caption=content['caption'],
+        )
+        add_result(sects, el, options, raw=content)
+
+    for content in outs.pop('script', []):
+        logger.info(f'Adding script: "{utils.trunc(content)}"')
+        el = script_tmpl.render(
+            content=content,
+        )
+        add_result(sects, el, options, raw=content)
+
+    for content in outs.pop('stdout', []):
+        import pdb; pdb.set_trace()
+        if options[ChunkOption.show_messages]:
+            s = f'{options[ChunkOption.result_prefix]} "{content}"'
+            add_result(sects, s, options, raw=content)
+
+    for content in outs.pop('stderr', []):
+        if options[ChunkOption.show_warnings]:
+            s = f'WARNING {options[ChunkOption.result_prefix]} "{content}"'
+            add_result(sects, s, options, raw=content)
+
+    for content in outs.pop('error', []):
+        sexc = execute.recover_exception(content)
+        if raise_errors:
+            raise ValueError(f"Got exception: '{sexc}'")
         else:
-            raise NotImplementedError(msg_type)
+            s = f'ERROR {options[ChunkOption.result_prefix]} "{sexc}"'
+            add_result(sects, s, options, raw=content)
+
+    for kind in outs:
+        for content in outs[kind]:
+            raise NotImplementedError(f"{kind}: {content}")
+
     s = '\n\n'.join(sects) + '\n\n'
     return s
 
 
-def process_parts(parts, header, global_options):
-    client = execute.get_kernel_client()
+def process_parts(parts, header, global_options,
+                  connection_file=None):
+    client = execute.get_kernel_client(connection_file=connection_file)
 
     parts_evaled = []
     for part in parts:
         if isinstance(part, parse.InlineCode):
+            logger.info(f'Processing inline code: "{utils.trunc(part.code)}"...')
             options = global_options.copy()
             if options[ChunkOption.run_code]:
-                replies = execute.exec_code(
+                outs = execute.exec_code(
                     client,
                     part.code,
-                    raise_errors=options[ChunkOption.show_errors],
+                    implicit_display=True,
                 )
-                r = render_inline(part.code, replies)
-            else:
-                r = recover_inline_source(part.code)
-        elif isinstance(part, parse.CodeChunk):
-            options = update_chunk_options(global_options, part.options)
-            if options[ChunkOption.run_code]:
-                replies = execute.exec_code(
-                    client,
+                r = render_inline(
                     part.code,
+                    outs,
                     raise_errors=not options[ChunkOption.show_errors],
                 )
-                r = render_chunk(part.code, options, replies)
+            else:
+                r = recover_inline_source(part.code)
+            logger.info('Processed inline code.')
+        elif isinstance(part, parse.CodeChunk):
+            logger.info(f'Processing code chunk: "{utils.trunc(part.code)}"...')
+            options = update_chunk_options(global_options, part.options)
+            if options[ChunkOption.run_code]:
+                outs = execute.exec_code(
+                    client,
+                    part.code,
+                    implicit_display=False,
+                )
+                r = render_chunk(
+                    part.code,
+                    options,
+                    outs,
+                    raise_errors=not options[ChunkOption.show_errors],
+                )
             else:
                 r = recover_chunk_source(part.code)
         elif isinstance(part, str):
@@ -316,11 +343,17 @@ def get_pandoc_var_args(k, v):
 
 
 def output_html_document(header, parts, output_fmt_str, global_options,
-                         out_path_base):
+                         out_path_base,
+                         connection_file=None):
     render_options = update_render_options(DEFAULT_RENDER_OPTS,
                                            header['output'][output_fmt_str])
 
-    md_out_str, header = process_parts(parts, header, global_options)
+    logger.info('Processing parsed document...')
+    md_out_str, header = process_parts(parts, header, global_options,
+                                       connection_file=connection_file)
+    logger.info('Processing parsed document.')
+
+    logger.info('Building pandoc arguments...')
 
     # Build up Pandoc's extra arguments.
     extra_pandoc_args = DEFAULT_EXTRA_PANDOC_ARGS[:]
@@ -425,8 +458,11 @@ def output_html_document(header, parts, output_fmt_str, global_options,
     # in_fmt = 'markdown_strict' + ''.join(pandoc_md_extensions)
     in_fmt = 'markdown' + ''.join(pandoc_md_extensions)
     out_fmt = 'html'
+    logger.info('Built pandoc arguments.')
 
     out_path = f"{out_path_base}{os.extsep}html"
+
+    logger.info('Converting markdown output to HTML...')
     pypandoc.convert_text(
         source=md_out_str,
         to=out_fmt,
@@ -434,6 +470,7 @@ def output_html_document(header, parts, output_fmt_str, global_options,
         extra_args=extra_pandoc_args,
         outputfile=out_path,
     )
+    logger.info('Converted markdown output to HTML.')
 
 
 FORMAT_TO_ROUTINE = {

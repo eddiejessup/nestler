@@ -5,6 +5,7 @@ import os.path as opath
 from . import parseful as parse
 from .constants import ChunkOption
 from . import output_routines
+from . import start_zmq_kernel
 
 logger = logging.getLogger(__name__)
 
@@ -34,20 +35,28 @@ DEFAULT_CHUNK_OPTS = {
 }
 
 
-def run(in_stream, out_path_base):
+def run(in_stream, out_path_base, connection_file=None):
+    connection_file = start_zmq_kernel.CONNECTION_FILE
+    logger.info('Reading file...')
     md_in = in_stream.read()
+    logger.info('Read file.')
 
+    logger.info('Parsing file...')
     header, parts = parse.parse(md_in)
+    logger.info('Parsed file.')
 
     default_options = DEFAULT_CHUNK_OPTS.copy()
     # TODO.
     global_options = default_options.copy()
 
     for output_fmt_str in header.get('output', {}):
+        logger.info(f'Rendering file to "{output_fmt_str}"...')
         output_fmt = output_routines.OutputFormat(output_fmt_str)
         output_routine = output_routines.FORMAT_TO_ROUTINE[output_fmt]
         output_routine(header, parts, output_fmt_str, global_options,
-                       out_path_base)
+                       out_path_base,
+                       connection_file=connection_file)
+        logger.info(f'Rendered file to "{output_fmt_str}".')
 
 
 def set_log_level(verbose_count):
@@ -65,6 +74,8 @@ def main():
         # internally as it's a keyword.
         metavar='input'
     )
+    parser.add_argument('-e', '--existing',
+                        help='Kernel connection file.')
     parser.add_argument('-v', '--verbose', dest='verbose_count',
                         action='count', default=0,
                         help='Each occurrence increases log verbosity.')
@@ -74,4 +85,5 @@ def main():
 
     logging.basicConfig(level=logging.INFO)
     out_path_base = opath.splitext(args.in_file.name)[0]
-    run(args.in_file, out_path_base)
+    run(args.in_file, out_path_base,
+        connection_file=args.existing)
