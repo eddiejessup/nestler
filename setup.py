@@ -90,6 +90,7 @@ setup(
     entry_points={
         'console_scripts': [
             'nestler = nestler.nestler:main',
+            'start-kernel = nestler.start_kernel:main',
         ],
     },
 )

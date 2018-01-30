@@ -1,10 +1,15 @@
+
 <div class="row figure">
   <div class="col-md-8 col-md-offset-2">
     <figure class="text-center">
       <img src="data:{{ fmt }};base64,{{ data }}">
       {% if caption %}
-      <figcaption class="text-justify">{{ caption }}</figcaption>
+        <br>
+        <figcaption class="text-justify">
+          {{ caption }}
+        </figcaption>
       {% endif %}
-  </figure>
+    </figure>
+  </div>
 </div>
-</div>
+

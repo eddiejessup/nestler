@@ -12,8 +12,6 @@ from . import execute
 from .options import update_chunk_options
 from . import utils
 
-import os
-
 THIS_FILE_DIR_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -288,51 +286,59 @@ def render_chunk(code, options, outs, raise_errors):
     return s
 
 
+def _process_part(part, client, global_options):
+    if isinstance(part, parse.InlineCode):
+        logger.info(f'Processing inline code: "{utils.trunc(part.code)}"...')
+        options = global_options.copy()
+        if options[ChunkOption.run_code]:
+            outs = execute.exec_code(
+                client,
+                part.code,
+                implicit_display=True,
+            )
+            return render_inline(
+                part.code,
+                outs,
+                raise_errors=not options[ChunkOption.show_errors],
+            )
+        else:
+            return recover_inline_source(part.code)
+        logger.info('Processed inline code.')
+    elif isinstance(part, parse.CodeChunk):
+        logger.info(f'Processing code chunk: "{utils.trunc(part.code)}"...')
+        options = update_chunk_options(global_options, part.options)
+        if options[ChunkOption.run_code]:
+            outs = execute.exec_code(
+                client,
+                part.code,
+                implicit_display=False,
+            )
+            return render_chunk(
+                part.code,
+                options,
+                outs,
+                raise_errors=not options[ChunkOption.show_errors],
+            )
+        else:
+            return recover_chunk_source(part.code)
+    elif isinstance(part, str):
+        return part
+    else:
+        raise Exception
+
+
 def process_parts(parts, header, global_options,
                   connection_file=None):
     client = execute.get_kernel_client(connection_file=connection_file)
 
+    execute.exec_code(client, 'from nestler.preamble import *',
+                      implicit_display=False)
+
     parts_evaled = []
     for part in parts:
-        if isinstance(part, parse.InlineCode):
-            logger.info(f'Processing inline code: "{utils.trunc(part.code)}"...')
-            options = global_options.copy()
-            if options[ChunkOption.run_code]:
-                outs = execute.exec_code(
-                    client,
-                    part.code,
-                    implicit_display=True,
-                )
-                r = render_inline(
-                    part.code,
-                    outs,
-                    raise_errors=not options[ChunkOption.show_errors],
-                )
-            else:
-                r = recover_inline_source(part.code)
-            logger.info('Processed inline code.')
-        elif isinstance(part, parse.CodeChunk):
-            logger.info(f'Processing code chunk: "{utils.trunc(part.code)}"...')
-            options = update_chunk_options(global_options, part.options)
-            if options[ChunkOption.run_code]:
-                outs = execute.exec_code(
-                    client,
-                    part.code,
-                    implicit_display=False,
-                )
-                r = render_chunk(
-                    part.code,
-                    options,
-                    outs,
-                    raise_errors=not options[ChunkOption.show_errors],
-                )
-            else:
-                r = recover_chunk_source(part.code)
-        elif isinstance(part, str):
-            r = part
-        else:
-            raise Exception
+        r = _process_part(part, client, global_options)
         parts_evaled.append(r)
+
     client.shutdown()
     s = ''.join(parts_evaled)
     return s, header

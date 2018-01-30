@@ -1,10 +1,12 @@
 ---
 title: Pilloried duplicity
 author: Elliot Marsden
+date: "2017-12"
 output:
     html_document:
+        template: default.html
+        theme: readable
         keep_md: true
-        css: style.css
 ---
 
 # Test document for PyMarkdown
@@ -30,31 +32,31 @@ drwxr-xr-x  3 ejm  staff    96  7 Nov 21:22 test
 
 ## Meat: Inline
 
-Ok let's ramp it up: some stateless inline code. A typical realisation of the repeated application of successor function, to the natural numbers, represented through an infix operator, might look like the following: 2 + 2 = `py sum([2 for _ in range(2)])`.
+Ok let's ramp it up: some stateless inline code. A typical realisation of the repeated application of successor function, to the natural numbers, represented through an infix operator, might look like the following: 2 + 2 = `python sum([2 for _ in range(2)])`.
 
-Let's take that a step further: let's carry state between those inline chunks. That same operation again: 2 + 2 = `py a=sum([2 for _ in range(2)]);a`. One more time, using that result we just stored: 2 + 2 = `py a`.
+Let's take that a step further: let's carry state between those inline chunks. That same operation again: 2 + 2 = `python a=sum([2 for _ in range(2)]);a`. One more time, using that result we just stored: 2 + 2 = `python a`.
 
 ## Throwing chunks
 
 Smashing it. I think the next smallest step would be just to define the state in a chunk, rather than inline. So let's do that. I'm not expecting any output at this point.
 
-```{py }
+```{python }
 b = 2 - 2
 ```
 
-Now let's call up that function. Who knows what result we got? I do. I expect this to make sense to you the reader: 2 - 2 = `py b`.
+Now let's call up that function. Who knows what result we got? I do. I expect this to make sense to you the reader: 2 - 2 = `python b`.
 
 ## Put yourself out there
 
 Now let's enter the strange world of chunk output. First, some boring old standard-out stream output, so yucky nobody would want to see it.
 
-```{py }
+```{python }
 print(f"2 + 2 = {2 + 2}")
 ```
 
 Another way we can get plaintext output is to write an expression that returns something, on the last line of a chunk. Let's try that.
 
-```{py }
+```{python }
 b = 2 + 2
 b
 ```
@@ -65,41 +67,41 @@ I'm not sure this is the best direction to go, in terms of gradually increasing 
 
 `comment` lets us change the prompt that starts each plaintext output line.
 
-```{py comment=":"}
+```{python comment=":"}
 b
 ```
 
 Disabling `echo` lets us hide the code chunk, and only show the output.
 
-```{py echo=False}
+```{python echo=False}
 b
 ```
 
 Disabling `eval` stops the code chunk from even being run.
 
-```{py eval=False}
+```{python eval=False}
 b
 ```
 
 Disabling `include` runs the code, but hides both the code and its output.
 
-```{py include=False}
+```{python include=False}
 c = 2 * 8
 ```
 
-```{py}
+```{python}
 print(f"In the last non-included chunk I computed 'c' to be {c}")
 ```
 
 We can just hide the results by setting the `results` option to `"hide"`.
 
-```{py results="hide"}
+```{python results="hide"}
 print(f"In the last non-included chunk I computed 'c' to be {c}")
 ```
 
 While we're on the subject, another potentially easy one to implement is the option `"asis"`, which stops any post-processing of the results.
 
-```{py results="asis"}
+```{python results="asis"}
 print(f"\n#### Let's inject some _emphatic_ _markdown_ into _proceedings_\n")
 ```
 
@@ -111,7 +113,7 @@ The last simple textual options I can see are about showing errors, warnings and
 
 So calls to `print` to standard out should produce nothing, if `message` is disabled:
 
-```{py message=False}
+```{python message=False}
 import sys
 print(f"Help, help, the computer is on fire!")
 print(f"Help, help, the computer really is on fire!", file=sys.stderr)
@@ -119,7 +121,7 @@ print(f"Help, help, the computer really is on fire!", file=sys.stderr)
 
 If I disable `warning`, we should now see nothing from a `print` call to standard error:
 
-```{py warning=False}
+```{python warning=False}
 import sys
 print(f"Help, help, the computer is on fire!")
 print(f"Help, help, the computer really is on fire!", file=sys.stderr)
@@ -127,13 +129,13 @@ print(f"Help, help, the computer really is on fire!", file=sys.stderr)
 
 This warnings thing should also work if we use Python's warnings machinery. Let's take a look:
 
-```{py}
+```{python}
 import warnings
 warnings.warn(f"Help, help, the computer really is on fire!")
 ```
 
 Looks ok. Now for errors. Let's make one:
 
-```{py error=False}
+```{python error=True}
 raise Exception("Oh gee the computer burned down.")
 ```

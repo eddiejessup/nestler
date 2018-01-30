@@ -5,7 +5,7 @@ import os.path as opath
 from . import parseful as parse
 from .constants import ChunkOption
 from . import output_routines
-from . import start_zmq_kernel
+from . import start_kernel
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,6 @@ DEFAULT_CHUNK_OPTS = {
 
 
 def run(in_stream, out_path_base, connection_file=None):
-    connection_file = start_zmq_kernel.CONNECTION_FILE
     logger.info('Reading file...')
     md_in = in_stream.read()
     logger.info('Read file.')
@@ -75,6 +74,7 @@ def main():
         metavar='input'
     )
     parser.add_argument('-e', '--existing',
+                        default=start_kernel.DEFAULT_CONNECTION_FILE,
                         help='Kernel connection file.')
     parser.add_argument('-v', '--verbose', dest='verbose_count',
                         action='count', default=0,

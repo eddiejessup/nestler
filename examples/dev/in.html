@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+
+<meta name="author" content="Elliot Marsden" />
+
+
+<title>Pilloried duplicity</title>
+
+
+<!-- Custom section. -->
+<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<link rel="stylesheet" href="https://bootswatch.com/3/readable/bootstrap.min.css" crossorigin="anonymous">
+<!-- End of custom section. -->
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; position: absolute; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; }
+pre.numberSource a.sourceLine:empty
+  { position: absolute; }
+pre.numberSource a.sourceLine::before
+  { content: attr(data-line-number);
+    position: absolute; left: -5em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+</style>
+
+
+
+<div class="container-fluid main-container">
+
+<!-- tabsets -->
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+</script>
+
+<!-- code folding -->
+
+
+
+
+
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Pilloried duplicity</h1>
+<h4 class="author"><em>Elliot Marsden</em></h4>
+<h4 class="date"><em>2017-12</em></h4>
+
+</div>
+
+
+<h1 id="test-document-for-pymarkdown">Test document for PyMarkdown</h1>
+<h2 id="prelude-markdown">Prelude: Markdown</h2>
+<p>Here is some easy stuff to get started: let’s just check we don’t get tripped up by ordinary markdown-style code markup. To show files at the terminal, one can run the program <code>ls</code>. The <code>-l</code> flag provides more information. Here is how a typical usage scenario might look:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb1-1" data-line-number="1">❯ <span class="fu">ls</span> -l</a>
+<a class="sourceLine" id="cb1-2" data-line-number="2"><span class="ex">total</span> 56</a>
+<a class="sourceLine" id="cb1-3" data-line-number="3"><span class="ex">-rw-r--r--</span>  1 ejm  staff  1524  7 Nov 21:22 LICENSE</a>
+<a class="sourceLine" id="cb1-4" data-line-number="4"><span class="ex">-rw-r--r--</span>  1 ejm  staff     6  7 Nov 21:22 README.md</a>
+<a class="sourceLine" id="cb1-5" data-line-number="5"><span class="ex">-rw-r--r--</span>  1 ejm  staff    46  7 Nov 21:22 Setup.hs</a>
+<a class="sourceLine" id="cb1-6" data-line-number="6"><span class="ex">drwxr-xr-x</span>  5 ejm  staff   160  8 Nov 23:39 app</a>
+<a class="sourceLine" id="cb1-7" data-line-number="7"><span class="ex">-rw-r--r--@</span> 1 ejm  staff  1297 10 Aug  1992 cmr10.tfm</a>
+<a class="sourceLine" id="cb1-8" data-line-number="8"><span class="ex">-rw-r--r--</span>  1 ejm  staff  1841  9 Nov 00:05 hex.cabal</a>
+<a class="sourceLine" id="cb1-9" data-line-number="9"><span class="ex">drwxr-xr-x</span>  5 ejm  staff   160  8 Nov 23:06 src</a>
+<a class="sourceLine" id="cb1-10" data-line-number="10"><span class="ex">-rw-r--r--</span>  1 ejm  staff  2194  9 Nov 00:03 stack.yaml</a>
+<a class="sourceLine" id="cb1-11" data-line-number="11"><span class="ex">drwxr-xr-x</span>  3 ejm  staff    96  7 Nov 21:22 test</a>
+<a class="sourceLine" id="cb1-12" data-line-number="12"><span class="ex">-rw-r--r--</span>  1 ejm  staff   160  8 Nov 20:19 test.tex</a></code></pre></div>
+<h2 id="meat-inline">Meat: Inline</h2>
+<p>Ok let’s ramp it up: some stateless inline code. A typical realisation of the repeated application of successor function, to the natural numbers, represented through an infix operator, might look like the following: 2 + 2 = 4.</p>
+<p>Let’s take that a step further: let’s carry state between those inline chunks. That same operation again: 2 + 2 = 4. One more time, using that result we just stored: 2 + 2 = 4.</p>
+<h2 id="throwing-chunks">Throwing chunks</h2>
+<p>Smashing it. I think the next smallest step would be just to define the state in a chunk, rather than inline. So let’s do that. I’m not expecting any output at this point.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb2-1" data-line-number="1">b <span class="op">=</span> <span class="dv">2</span> <span class="op">-</span> <span class="dv">2</span></a></code></pre></div>
+<p>Now let’s call up that function. Who knows what result we got? I do. I expect this to make sense to you the reader: 2 - 2 = 0.</p>
+<h2 id="put-yourself-out-there">Put yourself out there</h2>
+<p>Now let’s enter the strange world of chunk output. First, some boring old standard-out stream output, so yucky nobody would want to see it.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb3-1" data-line-number="1"><span class="bu">print</span>(<span class="ss">f&quot;2 + 2 = </span><span class="sc">{</span><span class="dv">2</span> <span class="op">+</span> <span class="dv">2</span><span class="sc">}</span><span class="ss">&quot;</span>)</a></code></pre></div>
+<blockquote>
+<p>“2 + 2 = 4”</p>
+</blockquote>
+<p>Another way we can get plaintext output is to write an expression that returns something, on the last line of a chunk. Let’s try that.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb4-1" data-line-number="1">b <span class="op">=</span> <span class="dv">2</span> <span class="op">+</span> <span class="dv">2</span></a>
+<a class="sourceLine" id="cb4-2" data-line-number="2">b</a></code></pre></div>
+<blockquote>
+<p>4</p>
+</blockquote>
+<h2 id="providing-optionality">Providing optionality</h2>
+<p>I’m not sure this is the best direction to go, in terms of gradually increasing complexity, but here goes. There are a few options to control output, so let’s try them.</p>
+<p><code>comment</code> lets us change the prompt that starts each plaintext output line.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb5-1" data-line-number="1">b</a></code></pre></div>
+<p>: 4</p>
+<p>Disabling <code>echo</code> lets us hide the code chunk, and only show the output. &gt; 4</p>
+<p>Disabling <code>eval</code> stops the code chunk from even being run.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb6-1" data-line-number="1">b</a></code></pre></div>
+<p>Disabling <code>include</code> runs the code, but hides both the code and its output.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb7-1" data-line-number="1"><span class="bu">print</span>(<span class="ss">f&quot;In the last non-included chunk I computed &#39;c&#39; to be </span><span class="sc">{c}</span><span class="ss">&quot;</span>)</a></code></pre></div>
+<blockquote>
+<p>“In the last non-included chunk I computed ‘c’ to be 16”</p>
+</blockquote>
+<p>We can just hide the results by setting the <code>results</code> option to <code>&quot;hide&quot;</code>.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb8-1" data-line-number="1"><span class="bu">print</span>(<span class="ss">f&quot;In the last non-included chunk I computed &#39;c&#39; to be </span><span class="sc">{c}</span><span class="ss">&quot;</span>)</a></code></pre></div>
+<p>While we’re on the subject, another potentially easy one to implement is the option <code>&quot;asis&quot;</code>, which stops any post-processing of the results.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb9-1" data-line-number="1"><span class="bu">print</span>(<span class="ss">f&quot;</span><span class="ch">\n</span><span class="ss">#### Let&#39;s inject some _emphatic_ _markdown_ into _proceedings_</span><span class="ch">\n</span><span class="ss">&quot;</span>)</a></code></pre></div>
+<h4 id="lets-inject-some-emphatic-markdown-into-proceedings">Let’s inject some <em>emphatic</em> <em>markdown</em> into <em>proceedings</em></h4>
+<p>The last simple textual options I can see are about showing errors, warnings and messages. I’m going to interpret these as:</p>
+<ul>
+<li>Disabling <code>message</code> hides stream messages to standard out</li>
+<li>Disabling <code>warning</code> hides stream messages to standard error</li>
+<li>Enabling <code>error</code> shows exceptions in the output, and keeps running</li>
+</ul>
+<p>So calls to <code>print</code> to standard out should produce nothing, if <code>message</code> is disabled:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb10-1" data-line-number="1"><span class="im">import</span> sys</a>
+<a class="sourceLine" id="cb10-2" data-line-number="2"><span class="bu">print</span>(<span class="ss">f&quot;Help, help, the computer is on fire!&quot;</span>)</a>
+<a class="sourceLine" id="cb10-3" data-line-number="3"><span class="bu">print</span>(<span class="ss">f&quot;Help, help, the computer really is on fire!&quot;</span>, <span class="bu">file</span><span class="op">=</span>sys.stderr)</a></code></pre></div>
+<p>WARNING &gt; “Help, help, the computer really is on fire!”</p>
+<p>If I disable <code>warning</code>, we should now see nothing from a <code>print</code> call to standard error:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb11-1" data-line-number="1"><span class="im">import</span> sys</a>
+<a class="sourceLine" id="cb11-2" data-line-number="2"><span class="bu">print</span>(<span class="ss">f&quot;Help, help, the computer is on fire!&quot;</span>)</a>
+<a class="sourceLine" id="cb11-3" data-line-number="3"><span class="bu">print</span>(<span class="ss">f&quot;Help, help, the computer really is on fire!&quot;</span>, <span class="bu">file</span><span class="op">=</span>sys.stderr)</a></code></pre></div>
+<blockquote>
+<p>“Help, help, the computer is on fire!”</p>
+</blockquote>
+<p>This warnings thing should also work if we use Python’s warnings machinery. Let’s take a look:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb12-1" data-line-number="1"><span class="im">import</span> warnings</a>
+<a class="sourceLine" id="cb12-2" data-line-number="2">warnings.warn(<span class="ss">f&quot;Help, help, the computer really is on fire!&quot;</span>)</a></code></pre></div>
+<p>WARNING &gt; “/Users/emarsden/.virtualenvs/nestler_env/lib/python3.6/site-packages/ipykernel_launcher.py:2: UserWarning: Help, help, the computer really is on fire!”</p>
+<p>Looks ok. Now for errors. Let’s make one:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb13-1" data-line-number="1"><span class="cf">raise</span> <span class="pp">Exception</span>(<span class="st">&quot;Oh gee the computer burned down.&quot;</span>)</a></code></pre></div>
+<p>ERROR &gt; “Exception: Oh gee the computer burned down.”</p>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+
+</body>
+</html>
